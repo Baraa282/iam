@@ -719,111 +719,120 @@
 			}
 
 			function shareAyah() {
-				const surah = this.dataset.surah;
-				const ayah = this.dataset.ayah;
-				const ayahText = this.parentElement.querySelector('.ayah-text').textContent;
-				const translationText = this.parentElement.querySelector('.translation').textContent;
-				const surahName = surahs[surah - 1].arabic + " - " + surahs[surah - 1].english;
-				const shareUrl = `${window.location.origin}?surah=${surah}&ayah=${ayah}`;
+    const surah = this.dataset.surah;
+    const ayah = this.dataset.ayah;
+    const ayahText = this.parentElement.querySelector('.ayah-text').textContent;
+    const translationText = this.parentElement.querySelector('.translation').textContent;
+    const surahName = surahs[surah - 1].arabic + " - " + surahs[surah - 1].english;
+    const shareUrl = `${window.location.origin}?surah=${surah}&ayah=${ayah}`;
 
-				// إعداد Canvas
-				const canvas = document.getElementById('shareCanvas');
-				const ctx = canvas.getContext('2d');
-				
-				// تحديد أبعاد الصورة
-				canvas.width = 600;
-				canvas.height = 400;
+    const canvas = document.getElementById('shareCanvas');
+    const ctx = canvas.getContext('2d');
 
-				// تحميل صورة النمط الإسلامي
-				const patternImage = new Image();
-				patternImage.crossOrigin = "Anonymous"; // للسماح بتحميل الصورة من مصدر خارجي
-				patternImage.src = 'ros.jpg'
+    canvas.width = 800;
+    canvas.height = 600;
 
-				patternImage.onload = () => {
-					// رسم الصورة كخلفية
-					ctx.drawImage(patternImage, 0, 0, canvas.width, canvas.height);
+    const patternImage = new Image();
+    patternImage.crossOrigin = "Anonymous";
+    patternImage.src = 'ros.jpg';
 
-					// إضافة طبقة شفافة لتحسين القراءة
-					ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-					ctx.fillRect(0, 0, canvas.width, canvas.height);
+    patternImage.onload = () => {
+        ctx.drawImage(patternImage, 0, 0, canvas.width, canvas.height);
+        
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-					// إعداد الخطوط
-					ctx.textAlign = 'center';
-					ctx.fillStyle = '#2A5C8A'; // لون النص الأزرق الداكن
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#2A5C8A';
+        
+        let currentY = 80; // Starting Y position
+        const sectionSpacing = 20;
 
-					// النص العربي (الآية)
-					ctx.font = '40px Amiri';
-					ctx.fillText(ayahText, canvas.width / 2, 100);
+        // Draw Arabic Ayah
+        ctx.font = '35px Amiri';
+        const ayahHeight = wrapText(ctx, ayahText, canvas.width/2, currentY, 400, 52);
+        currentY += ayahHeight + sectionSpacing;
 
-					// اسم السورة ورقم الآية
-					ctx.font = '24px Amiri';
-					ctx.fillText(`${surahName} (${parseInt(ayah) + 1})`, canvas.width / 2, 160);
+        // Draw Surah Name
+        ctx.font = '24px Amiri';
+        ctx.fillText(`${surahName} (${parseInt(ayah) + 1})`, canvas.width/2, currentY);
+        currentY += 28 + sectionSpacing;
 
-					// الترجمة
-					ctx.font = '20px Arial';
-					wrapText(ctx, translationText, canvas.width / 2, 200, 500, 30);
+        // Draw Translation
+        ctx.font = '20px Arial';
+        const translationHeight = wrapText(ctx, translationText, canvas.width/2, currentY, 500, 25);
+        currentY += translationHeight + sectionSpacing;
 
-					// رابط الموقع
-					ctx.font = '16px Arial';
-					ctx.fillText(shareUrl, canvas.width / 2, canvas.height - 30);
+        // Draw URL (with bottom padding)
+        ctx.font = '16px Arial';
+        const minBottomSpace = 60;
+        const urlY = Math.max(currentY + 40, canvas.height - minBottomSpace);
+        ctx.fillText(shareUrl, canvas.width/2, urlY);
 
-					// تحويل Canvas إلى صورة
-					const imageData = canvas.toDataURL('image/png');
+        // Share/download logic
+        const imageData = canvas.toDataURL('image/png', 1.0);
+        
+        if (navigator.share) {
+            const shareData = {
+                title: `Quran - ${surahName} Ayah ${parseInt(ayah) + 1}`,
+                text: `${ayahText}\n\nTranslation: ${translationText}`,
+                url: shareUrl,
+                files: [dataURLtoFile(imageData, `quran-surah-${surah}-ayah-${ayah}.png`)]
+            };
+            navigator.share(shareData).catch(err => console.error('Error sharing:', err));
+        } else {
+            const link = document.createElement('a');
+            link.href = imageData;
+            link.download = `quran-surah-${surah}-ayah-${ayah}.png`;
+            link.click();
+            this.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => this.innerHTML = '<i class="fas fa-share-alt"></i>', 2000);
+            alert('تم تحميل الصورة! يمكنك مشاركتها يدويًا.');
+        }
+    };
+}
 
-					// مشاركة أو تحميل الصورة
-					if (navigator.share) {
-						const shareData = {
-							title: `Quran - ${surahName} Ayah ${parseInt(ayah) + 1}`,
-							text: `${ayahText}\n\nTranslation: ${translationText}`,
-							url: shareUrl,
-							files: [dataURLtoFile(imageData, `quran-surah-${surah}-ayah-${ayah}.png`)]
-						};
-						navigator.share(shareData).catch(err => console.error('Error sharing:', err));
-					} else {
-						const link = document.createElement('a');
-						link.href = imageData;
-						link.download = `quran-surah-${surah}-ayah-${ayah}.png`;
-						link.click();
-						this.innerHTML = '<i class="fas fa-check"></i>';
-						setTimeout(() => this.innerHTML = '<i class="fas fa-share-alt"></i>', 2000);
-						alert('تم تحميل الصورة! يمكنك مشاركتها يدويًا.');
-					}
-				};
-			}
+// Modified wrapText function with height calculation
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+    let lineCount = 0;
 
-			// دالة مساعدة لتقسيم النص الطويل
-			function wrapText(context, text, x, y, maxWidth, lineHeight) {
-				const words = text.split(' ');
-				let line = '';
-				let currentY = y;
+    for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+            context.fillText(line, x, currentY);
+            line = words[n] + ' ';
+            currentY += lineHeight;
+            lineCount++;
+        } else {
+            line = testLine;
+        }
+    }
+    
+    // Draw remaining text
+    context.fillText(line.trim(), x, currentY);
+    lineCount++;
+    
+    // Return total height used
+    return lineCount * lineHeight;
+}
 
-				for (let n = 0; n < words.length; n++) {
-					const testLine = line + words[n] + ' ';
-					const metrics = context.measureText(testLine);
-					const testWidth = metrics.width;
-					if (testWidth > maxWidth && n > 0) {
-						context.fillText(line, x, currentY);
-						line = words[n] + ' ';
-						currentY += lineHeight;
-					} else {
-						line = testLine;
-					}
-				}
-				context.fillText(line, x, currentY);
-			}
-
-			// دالة مساعدة لتحويل Data URL إلى ملف
-			function dataURLtoFile(dataurl, filename) {
-				const arr = dataurl.split(',');
-				const mime = arr[0].match(/:(.*?);/)[1];
-				const bstr = atob(arr[1]);
-				let n = bstr.length;
-				const u8arr = new Uint8Array(n);
-				while (n--) {
-					u8arr[n] = bstr.charCodeAt(n);
-				}
-				return new File([u8arr], filename, { type: mime });
-			}
+// Helper function to convert Data URL to File
+function dataURLtoFile(dataurl, filename) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+}
 
 			function toggleFavorite(button) {
 				const surah = button.dataset.surah;
